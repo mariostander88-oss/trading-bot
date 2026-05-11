@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import os
 import secrets
+import sys
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.broker import AlpacaBroker
 from app.config import ConfigurationError, load_settings
