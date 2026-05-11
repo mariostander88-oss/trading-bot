@@ -10,12 +10,20 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.broker import AlpacaBroker
-from app.config import ConfigurationError, load_settings
-from app.data_provider import AlpacaDataProvider
-from app.database import TradingDatabase
-from app.logging_config import configure_logging
-from app.scheduler import TradingBot
+try:
+    from app.broker import AlpacaBroker
+    from app.config import ConfigurationError, load_settings
+    from app.data_provider import AlpacaDataProvider
+    from app.database import TradingDatabase
+    from app.logging_config import configure_logging
+    from app.scheduler import TradingBot
+except ModuleNotFoundError:
+    from broker import AlpacaBroker
+    from config import ConfigurationError, load_settings
+    from data_provider import AlpacaDataProvider
+    from database import TradingDatabase
+    from logging_config import configure_logging
+    from scheduler import TradingBot
 
 
 configure_logging()
