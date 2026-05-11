@@ -40,7 +40,7 @@ services:
   - type: web
     name: trading-bot-dashboard
     env: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=$PORT
     envVars:

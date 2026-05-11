@@ -130,6 +130,8 @@ This repo includes `render.yaml` with two services:
 - `trading-bot-api`: FastAPI backend and scheduler
 - `trading-bot-dashboard`: Streamlit dashboard
 
+The API service uses a paid always-on Render instance so the scheduler can keep running every 15 minutes. The dashboard uses Render's free web service plan and may sleep between visits.
+
 On Render, create a new Blueprint from this repository and set secret environment variables for both services:
 
 ```env
