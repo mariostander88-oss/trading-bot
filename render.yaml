@@ -36,6 +36,8 @@ services:
         sync: false
       - key: API_ADMIN_TOKEN
         sync: false
+      - key: PYTHONPATH
+        value: .
 
   - type: web
     name: trading-bot-dashboard
@@ -74,3 +76,5 @@ services:
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false
+      - key: PYTHONPATH
+        value: .
