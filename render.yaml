@@ -1,7 +1,7 @@
 services:
   - type: web
     name: trading-bot-api
-    env: python
+    runtime: python
     plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -39,7 +39,7 @@ services:
 
   - type: web
     name: trading-bot-dashboard
-    env: python
+    runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=$PORT
