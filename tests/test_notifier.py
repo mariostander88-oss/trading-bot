@@ -32,3 +32,9 @@ def test_status_report_includes_daily_goal_and_positions(tmp_path: Path) -> None
     assert "Daily progress: 1.20% / 1.00%" in report["body"]
     assert "SPY: qty=1" in report["body"]
     assert "SPY BUY" in report["body"]
+
+
+def test_whatsapp_recipients_supports_multiple_numbers() -> None:
+    recipients = NotificationService._whatsapp_recipients("+256782900106,whatsapp:+27835576370")
+
+    assert recipients == ["whatsapp:+256782900106", "whatsapp:+27835576370"]

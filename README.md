@@ -99,7 +99,7 @@ NOTIFICATION_CHANNELS=whatsapp
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
-TWILIO_WHATSAPP_TO=whatsapp:+254700000000
+TWILIO_WHATSAPP_TO=whatsapp:+254700000000,whatsapp:+27830000000
 ```
 
 Use `NOTIFICATION_CHANNELS=email,whatsapp` to send both. After configuring credentials, start the API and call `POST /notify/test` or use the dashboard's "Send Test Report Now" button.

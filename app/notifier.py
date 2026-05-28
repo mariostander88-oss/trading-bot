@@ -163,30 +163,31 @@ class NotificationService:
 
         account_sid = self.settings.twilio_account_sid
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
-        payload = urllib.parse.urlencode(
-            {
-                "From": self._whatsapp_address(self.settings.twilio_whatsapp_from),
-                "To": self._whatsapp_address(self.settings.twilio_whatsapp_to),
-                "Body": body,
-            }
-        ).encode()
         token = base64.b64encode(f"{account_sid}:{self.settings.twilio_auth_token}".encode()).decode()
-        request = urllib.request.Request(
-            url,
-            data=payload,
-            headers={
-                "Authorization": f"Basic {token}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                if response.status >= 300:
-                    raise NotificationError(f"Twilio returned HTTP {response.status}.")
-        except urllib.error.HTTPError as exc:
-            details = exc.read().decode(errors="replace")
-            raise NotificationError(f"Twilio returned HTTP {exc.code}: {details}") from exc
+        for recipient in self._whatsapp_recipients(self.settings.twilio_whatsapp_to):
+            payload = urllib.parse.urlencode(
+                {
+                    "From": self._whatsapp_address(self.settings.twilio_whatsapp_from),
+                    "To": recipient,
+                    "Body": body,
+                }
+            ).encode()
+            request = urllib.request.Request(
+                url,
+                data=payload,
+                headers={
+                    "Authorization": f"Basic {token}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=30) as response:
+                    if response.status >= 300:
+                        raise NotificationError(f"Twilio returned HTTP {response.status}.")
+            except urllib.error.HTTPError as exc:
+                details = exc.read().decode(errors="replace")
+                raise NotificationError(f"Twilio returned HTTP {exc.code}: {details}") from exc
 
     @staticmethod
     def _try_call(func: Any) -> tuple[Any, str | None]:
@@ -239,3 +240,10 @@ class NotificationService:
     def _whatsapp_address(value: str) -> str:
         stripped = value.strip()
         return stripped if stripped.startswith("whatsapp:") else f"whatsapp:{stripped}"
+
+    @classmethod
+    def _whatsapp_recipients(cls, value: str) -> list[str]:
+        recipients = [cls._whatsapp_address(item) for item in value.split(",") if item.strip()]
+        if not recipients:
+            raise NotificationError("At least one WhatsApp recipient is required.")
+        return recipients
