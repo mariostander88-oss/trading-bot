@@ -8,3 +8,4 @@ SQLAlchemy>=2.0.0
 streamlit>=1.37.0
 uvicorn[standard]>=0.30.0
 pytest>=8.3.0
+tzdata>=2025.2

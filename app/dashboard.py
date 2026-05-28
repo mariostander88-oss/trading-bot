@@ -16,6 +16,7 @@ try:
     from app.data_provider import AlpacaDataProvider
     from app.database import TradingDatabase
     from app.logging_config import configure_logging
+    from app.notifier import NotificationService
     from app.scheduler import TradingBot
 except ModuleNotFoundError:
     from broker import AlpacaBroker
@@ -23,6 +24,7 @@ except ModuleNotFoundError:
     from data_provider import AlpacaDataProvider
     from database import TradingDatabase
     from logging_config import configure_logging
+    from notifier import NotificationService
     from scheduler import TradingBot
 
 
@@ -65,18 +67,22 @@ try:
     )
     broker = AlpacaBroker(settings, database)
     bot = TradingBot(settings, database, broker=broker, data_provider=AlpacaDataProvider(settings))
+    notifier = NotificationService(settings, database, broker)
 except ConfigurationError as exc:
     st.error(f"Configuration error: {exc}")
     st.stop()
 
 
-left, middle, right = st.columns(3)
+left, middle, right, far_right = st.columns(4)
 with left:
     st.metric("Trading mode", settings.trading_mode.upper())
 with middle:
     st.metric("Watchlist", ", ".join(settings.watchlist))
 with right:
     st.metric("Daily realized P&L", f"{database.daily_realized_pnl():.2f}")
+with far_right:
+    daily_profit_pct = float(database.get_status("daily_profit_pct", 0) or 0)
+    st.metric("Daily goal", f"{daily_profit_pct * 100:.2f}% / {settings.daily_profit_target * 100:.2f}%")
 
 
 status = database.status_snapshot()
@@ -112,6 +118,30 @@ with control_right:
     if st.button("Disable Live Gate", disabled=not manual_live_gate):
         database.set_status("manual_live_trading_enabled", "false")
         st.rerun()
+    if st.button("Send Test Report Now", disabled=not settings.notifications_enabled):
+        try:
+            result = notifier.send_status_report(force=True)
+            st.success(f"Notification result: {result.get('status')}")
+        except Exception as exc:
+            database.log_error("dashboard", f"Notification test failed: {exc}")
+            st.error(f"Notification test failed: {exc}")
+
+
+st.subheader("Automation")
+automation_rows = [
+    {"setting": "Trading cycle", "value": f"Every {settings.timeframe_minutes} minutes during market hours"},
+    {
+        "setting": "Daily target blocks new buys",
+        "value": f"{settings.daily_goal_blocks_new_buys} at {settings.daily_profit_target * 100:.2f}%",
+    },
+    {"setting": "Notifications", "value": "enabled" if settings.notifications_enabled else "disabled"},
+    {"setting": "Notification channels", "value": ", ".join(settings.notification_channels)},
+    {
+        "setting": "Notification times",
+        "value": f"{', '.join(settings.notification_times)} {settings.notification_timezone}",
+    },
+]
+st.dataframe(pd.DataFrame(automation_rows), use_container_width=True, hide_index=True)
 
 
 st.subheader("Bot Status")

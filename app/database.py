@@ -142,6 +142,10 @@ class TradingDatabase:
             "last_cycle_status": "never_run",
             "daily_start_equity": "",
             "daily_start_equity_date": "",
+            "daily_profit_pct": "0",
+            "daily_goal_reached": "false",
+            "last_notification_at": "",
+            "last_notification_status": "never_sent",
         }
         with self.connect() as conn:
             for key, value in defaults.items():

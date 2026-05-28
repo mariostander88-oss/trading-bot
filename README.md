@@ -10,6 +10,8 @@ This is not financial advice. Trading involves substantial risk, including loss 
 - Long-only `SPY,QQQ` default watchlist
 - 20/50 SMA crossover strategy with RSI filter
 - Risk controls before every actionable order
+- Daily profit-target guard that can stop new buys after the configured goal is reached
+- Twice-daily status reports by email and/or Twilio WhatsApp
 - Emergency stop and manual live-trading gate stored in the database
 - SQLite locally or Supabase/Postgres on hosted servers
 - Trade journal tables for signals, orders, trades, errors, and bot status
@@ -50,6 +52,8 @@ WATCHLIST=SPY,QQQ
 DATA_FEED=iex
 MAX_RISK_PER_TRADE=0.01
 MAX_DAILY_LOSS=0.03
+DAILY_PROFIT_TARGET=0.01
+DAILY_GOAL_BLOCKS_NEW_BUYS=true
 MAX_OPEN_POSITIONS=3
 STOP_LOSS_PCT=0.02
 DATABASE_URL=
@@ -59,6 +63,46 @@ DATABASE_PATH=trading_bot.db
 `DATA_FEED=iex` is the safest default for free Alpaca paper testing. Use `sip` only if your Alpaca market-data subscription supports recent SIP data.
 
 API keys and database credentials must live in `.env` or your host's secret environment variables only. Do not commit `.env`.
+
+## Daily Goal Guard
+
+The bot does not guarantee a daily profit. `DAILY_PROFIT_TARGET` is a risk guard: when account equity is up by that percentage from the first equity snapshot of the day, `DAILY_GOAL_BLOCKS_NEW_BUYS=true` blocks new BUY orders for the rest of the day while still allowing SELL exits.
+
+Set `DAILY_PROFIT_TARGET=0` to disable this guard.
+
+## Status Notifications
+
+Reports are scheduled from the API service at `NOTIFICATION_TIMES` in `NOTIFICATION_TIMEZONE`. The default is two reports per day at 09:00 and 18:00 Africa/Nairobi time. Notifications are disabled until `NOTIFICATIONS_ENABLED=true` and a provider is configured.
+
+Email via SMTP:
+
+```env
+NOTIFICATIONS_ENABLED=true
+NOTIFICATION_CHANNELS=email
+NOTIFICATION_TIMES=09:00,18:00
+NOTIFICATION_TIMEZONE=Africa/Nairobi
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_gmail_app_password
+SMTP_FROM=your_email@gmail.com
+SMTP_TO=destination@example.com
+SMTP_USE_TLS=true
+SMTP_USE_SSL=false
+```
+
+WhatsApp via Twilio:
+
+```env
+NOTIFICATIONS_ENABLED=true
+NOTIFICATION_CHANNELS=whatsapp
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+TWILIO_WHATSAPP_TO=whatsapp:+254700000000
+```
+
+Use `NOTIFICATION_CHANNELS=email,whatsapp` to send both. After configuring credentials, start the API and call `POST /notify/test` or use the dashboard's "Send Test Report Now" button.
 
 ## Database
 

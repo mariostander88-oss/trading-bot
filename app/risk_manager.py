@@ -48,6 +48,18 @@ class RiskManager:
         drawdown = (starting_equity - current_equity) / starting_equity
         return drawdown >= self.settings.max_daily_loss
 
+    def daily_profit_target_reached(self, current_equity: float) -> bool:
+        if self.settings.daily_profit_target <= 0:
+            return False
+        starting_equity = self.database.set_daily_start_equity_if_needed(current_equity)
+        if starting_equity <= 0:
+            return False
+        gain = (current_equity - starting_equity) / starting_equity
+        reached = gain >= self.settings.daily_profit_target
+        self.database.set_status("daily_profit_pct", round(gain, 6))
+        self.database.set_status("daily_goal_reached", "true" if reached else "false")
+        return reached
+
     def check_trade(
         self,
         *,
@@ -74,6 +86,9 @@ class RiskManager:
 
         if normalized_side != "BUY":
             return RiskCheckResult(False, f"Blocked: unsupported order side {side}.")
+
+        if self.settings.daily_goal_blocks_new_buys and self.daily_profit_target_reached(equity):
+            return RiskCheckResult(False, "Blocked: daily profit target reached; no new buys today.")
 
         if open_positions_count >= self.settings.max_open_positions and not has_existing_position:
             return RiskCheckResult(False, "Blocked: max open positions reached.")

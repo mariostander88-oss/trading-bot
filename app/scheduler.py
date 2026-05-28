@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import traceback
 from dataclasses import asdict
+from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -10,6 +11,7 @@ from app.broker import AlpacaBroker, OrderRequest
 from app.config import Settings
 from app.data_provider import AlpacaDataProvider
 from app.database import TradingDatabase, utc_now
+from app.notifier import NotificationService
 from app.risk_manager import RiskManager
 from app.strategy import MovingAverageRsiStrategy, StrategySignal
 
@@ -53,6 +55,10 @@ class TradingBot:
             self.database.set_status("last_cycle_status", "max_daily_loss_reached")
             logger.error("Max daily loss reached; emergency stop enabled")
             return {"status": "blocked", "reason": "Max daily loss reached; emergency stop enabled."}
+
+        daily_goal_reached = self.risk_manager.daily_profit_target_reached(equity)
+        if daily_goal_reached:
+            logger.info("Daily profit target reached; new BUY orders will be blocked")
 
         positions = self.broker.get_current_positions()
         position_by_symbol = {str(position.get("symbol", "")).upper(): position for position in positions}
@@ -140,7 +146,7 @@ class TradingBot:
         )
 
 
-def create_scheduler(bot: TradingBot) -> BackgroundScheduler:
+def create_scheduler(bot: TradingBot, notifier: NotificationService | None = None) -> BackgroundScheduler:
     scheduler = BackgroundScheduler(timezone="UTC")
     scheduler.add_job(
         bot.run_cycle,
@@ -152,4 +158,19 @@ def create_scheduler(bot: TradingBot) -> BackgroundScheduler:
         max_instances=1,
         coalesce=True,
     )
+    if notifier and bot.settings.notifications_enabled:
+        timezone = ZoneInfo(bot.settings.notification_timezone)
+        for index, report_time in enumerate(bot.settings.notification_times):
+            hour_text, minute_text = report_time.split(":")
+            scheduler.add_job(
+                notifier.send_status_report,
+                "cron",
+                hour=int(hour_text),
+                minute=int(minute_text),
+                timezone=timezone,
+                id=f"status_report_{index}",
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
     return scheduler

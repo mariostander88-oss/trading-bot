@@ -51,3 +51,29 @@ def test_stop_loss_is_required(tmp_path: Path) -> None:
 
     assert not result.allowed
     assert "stop loss is required" in result.reason
+
+
+def test_daily_profit_target_blocks_new_buys(tmp_path: Path) -> None:
+    settings = Settings(
+        alpaca_api_key="key",
+        alpaca_secret_key="secret",
+        database_path=tmp_path / "test.db",
+        daily_profit_target=0.01,
+        daily_goal_blocks_new_buys=True,
+    )
+    database = TradingDatabase(settings.database_path)
+    database.set_daily_start_equity_if_needed(10_000)
+    manager = RiskManager(settings, database)
+
+    result = manager.check_trade(
+        side="BUY",
+        equity=10_200,
+        entry_price=100,
+        stop_loss=98,
+        open_positions_count=0,
+        has_existing_position=False,
+    )
+
+    assert not result.allowed
+    assert "daily profit target" in result.reason
+    assert database.get_status("daily_goal_reached") is True
