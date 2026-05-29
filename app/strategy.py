@@ -22,8 +22,17 @@ class StrategySignal:
 
 
 class MovingAverageRsiStrategy:
-    def __init__(self, stop_loss_pct: float = 0.02) -> None:
+    def __init__(
+        self,
+        stop_loss_pct: float = 0.02,
+        continuation_min_rsi: float = 45,
+        continuation_max_rsi: float = 68,
+        max_price_extension_pct: float = 0.015,
+    ) -> None:
         self.stop_loss_pct = stop_loss_pct
+        self.continuation_min_rsi = continuation_min_rsi
+        self.continuation_max_rsi = continuation_max_rsi
+        self.max_price_extension_pct = max_price_extension_pct
 
     def generate_signal(self, symbol: str, market_data: pd.DataFrame) -> StrategySignal:
         if len(market_data) < 51:
@@ -45,6 +54,8 @@ class MovingAverageRsiStrategy:
 
         bullish_cross = previous_sma_20 <= previous_sma_50 and sma_20 > sma_50
         bearish_cross = previous_sma_20 >= previous_sma_50 and sma_20 < sma_50
+        uptrend_active = sma_20 > sma_50
+        price_extension_pct = (close_price - sma_20) / sma_20 if sma_20 > 0 else 0
 
         if bullish_cross and rsi < 70:
             stop_loss = round(close_price * (1 - self.stop_loss_pct), 2)
@@ -52,6 +63,21 @@ class MovingAverageRsiStrategy:
                 symbol,
                 "BUY",
                 f"20 SMA crossed above 50 SMA and RSI is {rsi:.1f}, below overbought filter.",
+                close_price,
+                stop_loss,
+            )
+
+        if (
+            uptrend_active
+            and self.continuation_min_rsi <= rsi <= self.continuation_max_rsi
+            and 0 <= price_extension_pct <= self.max_price_extension_pct
+        ):
+            stop_loss = round(close_price * (1 - self.stop_loss_pct), 2)
+            return StrategySignal(
+                symbol,
+                "BUY",
+                "Trend continuation: SMA20 remains above SMA50, "
+                f"RSI is {rsi:.1f}, and price is {price_extension_pct * 100:.2f}% above SMA20.",
                 close_price,
                 stop_loss,
             )
@@ -68,7 +94,9 @@ class MovingAverageRsiStrategy:
         return StrategySignal(
             symbol,
             "HOLD",
-            f"No actionable crossover. SMA20={sma_20:.2f}, SMA50={sma_50:.2f}, RSI={rsi:.1f}.",
+            "No actionable setup. "
+            f"SMA20={sma_20:.2f}, SMA50={sma_50:.2f}, RSI={rsi:.1f}, "
+            f"price extension={price_extension_pct * 100:.2f}%.",
             close_price,
             None,
         )
