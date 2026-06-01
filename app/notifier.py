@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import smtplib
 import urllib.error
@@ -35,14 +36,16 @@ class NotificationService:
 
         report = self.build_status_report()
         delivered: list[str] = []
+        details: dict[str, object] = {}
         errors: list[dict[str, str]] = []
 
         for channel in self.settings.notification_channels:
             try:
                 if channel == "email":
                     self._send_email(report["subject"], report["body"])
+                    details[channel] = {"status": "accepted"}
                 elif channel == "whatsapp":
-                    self._send_whatsapp(report["whatsapp_body"])
+                    details[channel] = self._send_whatsapp(report["whatsapp_body"])
                 delivered.append(channel)
             except Exception as exc:
                 logger.exception("Failed to send %s notification", channel)
@@ -52,11 +55,11 @@ class NotificationService:
         self.database.set_status("last_notification_at", utc_now())
         self.database.set_status(
             "last_notification_status",
-            {"status": status, "delivered": delivered, "errors": errors},
+            {"status": status, "delivered": delivered, "details": details, "errors": errors},
         )
         if errors and not delivered:
             raise NotificationError(f"All notification channels failed: {errors}")
-        return {"status": status, "delivered": delivered, "errors": errors}
+        return {"status": status, "delivered": delivered, "details": details, "errors": errors}
 
     def build_status_report(self) -> dict[str, str]:
         local_now = datetime.now(ZoneInfo(self.settings.notification_timezone))
@@ -151,7 +154,7 @@ class NotificationService:
             recipients = [item.strip() for item in self.settings.smtp_to.split(",") if item.strip()]
             smtp.send_message(message, to_addrs=recipients)
 
-    def _send_whatsapp(self, body: str) -> None:
+    def _send_whatsapp(self, body: str) -> list[dict[str, str]]:
         required = [
             self.settings.twilio_account_sid,
             self.settings.twilio_auth_token,
@@ -164,6 +167,7 @@ class NotificationService:
         account_sid = self.settings.twilio_account_sid
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
         token = base64.b64encode(f"{account_sid}:{self.settings.twilio_auth_token}".encode()).decode()
+        accepted_messages: list[dict[str, str]] = []
         for recipient in self._whatsapp_recipients(self.settings.twilio_whatsapp_to):
             payload = urllib.parse.urlencode(
                 {
@@ -185,9 +189,18 @@ class NotificationService:
                 with urllib.request.urlopen(request, timeout=30) as response:
                     if response.status >= 300:
                         raise NotificationError(f"Twilio returned HTTP {response.status}.")
+                    response_data = json.loads(response.read().decode())
+                    accepted_messages.append(
+                        {
+                            "to": recipient,
+                            "sid": str(response_data.get("sid", "")),
+                            "status": str(response_data.get("status", "")),
+                        }
+                    )
             except urllib.error.HTTPError as exc:
                 details = exc.read().decode(errors="replace")
                 raise NotificationError(f"Twilio returned HTTP {exc.code}: {details}") from exc
+        return accepted_messages
 
     @staticmethod
     def _try_call(func: Any) -> tuple[Any, str | None]:

@@ -122,6 +122,7 @@ with control_right:
         try:
             result = notifier.send_status_report(force=True)
             st.success(f"Notification result: {result.get('status')}")
+            st.json(result)
         except Exception as exc:
             database.log_error("dashboard", f"Notification test failed: {exc}")
             st.error(f"Notification test failed: {exc}")
