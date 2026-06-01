@@ -50,6 +50,7 @@ class TradingBot:
 
         account = self.broker.get_account_info()
         equity = float(account.get("equity") or account.get("portfolio_value") or 0)
+        buying_power = float(account.get("buying_power") or account.get("cash") or equity)
         if self.risk_manager.daily_loss_reached(equity):
             self.database.set_status("emergency_stop", "true")
             self.database.set_status("last_cycle_status", "max_daily_loss_reached")
@@ -66,7 +67,7 @@ class TradingBot:
 
         for symbol in self.settings.watchlist:
             try:
-                result = self._process_symbol(symbol, equity, position_by_symbol)
+                result = self._process_symbol(symbol, equity, buying_power, position_by_symbol)
                 results.append(result)
             except Exception as exc:
                 logger.exception("Cycle failed for %s", symbol)
@@ -82,6 +83,7 @@ class TradingBot:
         self,
         symbol: str,
         equity: float,
+        buying_power: float,
         position_by_symbol: dict[str, dict[str, object]],
     ) -> dict[str, object]:
         market_data = self.data_provider.fetch_latest_bars(symbol)
@@ -101,6 +103,7 @@ class TradingBot:
             stop_loss=signal.stop_loss,
             open_positions_count=len(position_by_symbol),
             has_existing_position=has_position,
+            buying_power=buying_power,
         )
 
         if not risk_result.allowed:

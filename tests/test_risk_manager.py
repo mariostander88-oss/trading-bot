@@ -77,3 +77,49 @@ def test_daily_profit_target_blocks_new_buys(tmp_path: Path) -> None:
     assert not result.allowed
     assert "daily profit target" in result.reason
     assert database.get_status("daily_goal_reached") is True
+
+
+def test_existing_long_position_blocks_additional_buy(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    database = TradingDatabase(settings.database_path)
+    manager = RiskManager(settings, database)
+
+    result = manager.check_trade(
+        side="BUY",
+        equity=10_000,
+        entry_price=100,
+        stop_loss=98,
+        open_positions_count=1,
+        has_existing_position=True,
+        buying_power=5_000,
+    )
+
+    assert not result.allowed
+    assert "existing long position" in result.reason
+
+
+def test_buy_quantity_is_capped_to_buying_power(tmp_path: Path) -> None:
+    settings = Settings(
+        alpaca_api_key="key",
+        alpaca_secret_key="secret",
+        database_path=tmp_path / "test.db",
+        max_risk_per_trade=0.01,
+        max_daily_loss=0.03,
+        max_open_positions=3,
+    )
+    database = TradingDatabase(settings.database_path)
+    manager = RiskManager(settings, database)
+
+    result = manager.check_trade(
+        side="BUY",
+        equity=100_000,
+        entry_price=750,
+        stop_loss=735,
+        open_positions_count=0,
+        has_existing_position=False,
+        buying_power=49_000,
+    )
+
+    assert result.allowed
+    assert result.quantity == 64
+    assert "buying power" in result.reason
