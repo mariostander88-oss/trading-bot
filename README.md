@@ -7,7 +7,7 @@ This is not financial advice. Trading involves substantial risk, including loss 
 ## Features
 
 - Alpaca paper trading execution
-- Long-only `SPY,QQQ` default watchlist
+- Long-only broad ETF and AI exposure default watchlist
 - 20/50 SMA crossover strategy with RSI filter
 - Risk controls before every actionable order
 - Daily profit-target guard that can stop new buys after the configured goal is reached
@@ -48,7 +48,7 @@ Required safe defaults:
 ALPACA_BASE_URL=https://paper-api.alpaca.markets
 TRADING_MODE=paper
 LIVE_TRADING_CONFIRMED=false
-WATCHLIST=SPY,QQQ
+WATCHLIST=SPY,QQQ,NVDA,AMD,AVGO,TSM,ASML,MSFT,GOOGL,AMZN,META,ORCL,PLTR,SMCI,ARM,TSLA
 DATA_FEED=iex
 MAX_RISK_PER_TRADE=0.01
 MAX_DAILY_LOSS=0.03

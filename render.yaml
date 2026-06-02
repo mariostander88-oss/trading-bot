@@ -17,7 +17,7 @@ services:
       - key: LIVE_TRADING_CONFIRMED
         value: "false"
       - key: WATCHLIST
-        value: SPY,QQQ
+        value: SPY,QQQ,NVDA,AMD,AVGO,TSM,ASML,MSFT,GOOGL,AMZN,META,ORCL,PLTR,SMCI,ARM,TSLA
       - key: TIMEFRAME_MINUTES
         value: "15"
       - key: HISTORICAL_BARS_LIMIT
@@ -95,7 +95,7 @@ services:
       - key: LIVE_TRADING_CONFIRMED
         value: "false"
       - key: WATCHLIST
-        value: SPY,QQQ
+        value: SPY,QQQ,NVDA,AMD,AVGO,TSM,ASML,MSFT,GOOGL,AMZN,META,ORCL,PLTR,SMCI,ARM,TSLA
       - key: TIMEFRAME_MINUTES
         value: "15"
       - key: HISTORICAL_BARS_LIMIT
