@@ -78,6 +78,20 @@ services:
         sync: false
       - key: CONGRESS_LOOKBACK_DAYS
         value: "30"
+      - key: TAKE_PROFIT_PCT
+        value: "0.06"
+      - key: SHORT_SELLING_ENABLED
+        value: "true"
+      - key: YOLO_ENABLED
+        value: "true"
+      - key: YOLO_BUDGET
+        value: "5000"
+      - key: AB_TESTING_ENABLED
+        value: "true"
+      - key: OPTIONS_FLOW_ENABLED
+        value: "true"
+      - key: OPTIONS_FLOW_MIN_RATIO
+        value: "2.0"
 
   - type: web
     name: trading-bot-dashboard
@@ -158,3 +172,17 @@ services:
         sync: false
       - key: CONGRESS_LOOKBACK_DAYS
         value: "30"
+      - key: TAKE_PROFIT_PCT
+        value: "0.06"
+      - key: SHORT_SELLING_ENABLED
+        value: "true"
+      - key: YOLO_ENABLED
+        value: "true"
+      - key: YOLO_BUDGET
+        value: "5000"
+      - key: AB_TESTING_ENABLED
+        value: "true"
+      - key: OPTIONS_FLOW_ENABLED
+        value: "true"
+      - key: OPTIONS_FLOW_MIN_RATIO
+        value: "2.0"

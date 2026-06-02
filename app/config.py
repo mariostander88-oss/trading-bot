@@ -73,6 +73,13 @@ class Settings:
     twilio_whatsapp_from: str = ""
     twilio_whatsapp_to: str = ""
     congress_lookback_days: int = 30
+    take_profit_pct: float = 0.06
+    short_selling_enabled: bool = False
+    yolo_enabled: bool = True
+    yolo_budget: float = 5000.0
+    ab_testing_enabled: bool = True
+    options_flow_enabled: bool = True
+    options_flow_min_ratio: float = 2.0
 
     @property
     def is_paper(self) -> bool:
@@ -200,6 +207,13 @@ def load_settings(env_file: str | os.PathLike[str] = ".env") -> Settings:
         twilio_whatsapp_from=os.getenv("TWILIO_WHATSAPP_FROM", "").strip(),
         twilio_whatsapp_to=os.getenv("TWILIO_WHATSAPP_TO", "").strip(),
         congress_lookback_days=int(os.getenv("CONGRESS_LOOKBACK_DAYS", "30")),
+        take_profit_pct=float(os.getenv("TAKE_PROFIT_PCT", "0.06")),
+        short_selling_enabled=_parse_bool(os.getenv("SHORT_SELLING_ENABLED"), default=False),
+        yolo_enabled=_parse_bool(os.getenv("YOLO_ENABLED"), default=True),
+        yolo_budget=float(os.getenv("YOLO_BUDGET", "5000.0")),
+        ab_testing_enabled=_parse_bool(os.getenv("AB_TESTING_ENABLED"), default=True),
+        options_flow_enabled=_parse_bool(os.getenv("OPTIONS_FLOW_ENABLED"), default=True),
+        options_flow_min_ratio=float(os.getenv("OPTIONS_FLOW_MIN_RATIO", "2.0")),
     )
     settings.validate()
     return settings
