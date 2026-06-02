@@ -25,9 +25,9 @@ class MovingAverageRsiStrategy:
     def __init__(
         self,
         stop_loss_pct: float = 0.02,
-        continuation_min_rsi: float = 45,
-        continuation_max_rsi: float = 68,
-        max_price_extension_pct: float = 0.015,
+        continuation_min_rsi: float = 35,
+        continuation_max_rsi: float = 75,
+        max_price_extension_pct: float = 0.03,
     ) -> None:
         self.stop_loss_pct = stop_loss_pct
         self.continuation_min_rsi = continuation_min_rsi
@@ -57,7 +57,7 @@ class MovingAverageRsiStrategy:
         uptrend_active = sma_20 > sma_50
         price_extension_pct = (close_price - sma_20) / sma_20 if sma_20 > 0 else 0
 
-        if bullish_cross and rsi < 70:
+        if bullish_cross and rsi < 80:
             stop_loss = round(close_price * (1 - self.stop_loss_pct), 2)
             return StrategySignal(
                 symbol,

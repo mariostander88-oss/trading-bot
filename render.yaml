@@ -25,17 +25,17 @@ services:
       - key: DATA_FEED
         value: iex
       - key: MAX_RISK_PER_TRADE
-        value: "0.01"
+        value: "0.05"
       - key: MAX_DAILY_LOSS
-        value: "0.03"
+        value: "0.20"
       - key: DAILY_PROFIT_TARGET
-        value: "0.01"
+        value: "0"
       - key: DAILY_GOAL_BLOCKS_NEW_BUYS
-        value: "true"
+        value: "false"
       - key: MAX_OPEN_POSITIONS
-        value: "3"
+        value: "8"
       - key: STOP_LOSS_PCT
-        value: "0.02"
+        value: "0.03"
       - key: DATABASE_URL
         sync: false
       - key: API_ADMIN_TOKEN
@@ -103,17 +103,17 @@ services:
       - key: DATA_FEED
         value: iex
       - key: MAX_RISK_PER_TRADE
-        value: "0.01"
+        value: "0.05"
       - key: MAX_DAILY_LOSS
-        value: "0.03"
+        value: "0.20"
       - key: DAILY_PROFIT_TARGET
-        value: "0.01"
+        value: "0"
       - key: DAILY_GOAL_BLOCKS_NEW_BUYS
-        value: "true"
+        value: "false"
       - key: MAX_OPEN_POSITIONS
-        value: "3"
+        value: "8"
       - key: STOP_LOSS_PCT
-        value: "0.02"
+        value: "0.03"
       - key: DATABASE_URL
         sync: false
       - key: DASHBOARD_PASSWORD
