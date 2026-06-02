@@ -5,7 +5,7 @@ import secrets
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.broker import AlpacaBroker
@@ -14,6 +14,7 @@ from app.database import TradingDatabase
 from app.logging_config import configure_logging
 from app.notifier import NotificationService
 from app.scheduler import TradingBot, create_scheduler
+from app.whatsapp_commands import handle_command as handle_whatsapp_command
 
 
 configure_logging()
@@ -162,3 +163,30 @@ def set_manual_live_trading_gate(enabled: bool) -> dict[str, Any]:
         )
     database.set_status("manual_live_trading_enabled", "true" if enabled else "false")
     return {"manual_live_trading_enabled": enabled}
+
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_webhook(request: Request) -> Response:
+    """Twilio WhatsApp inbound message webhook. Configure this URL in your Twilio console."""
+    form = await request.form()
+    body = str(form.get("Body", "")).strip()
+    from_number = str(form.get("From", "")).strip()
+
+    if not state.settings or not state.database or not state.broker or not state.bot:
+        reply = "Bot is not ready yet."
+    else:
+        reply = handle_whatsapp_command(
+            body,
+            from_number,
+            settings=state.settings,
+            database=state.database,
+            broker=state.broker,
+            bot=state.bot,
+            congress_tracker=state.bot.congress_tracker,
+        )
+
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f"<Response><Message>{reply}</Message></Response>"
+    )
+    return Response(content=twiml, media_type="application/xml")

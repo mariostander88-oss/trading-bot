@@ -76,6 +76,8 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_TO
         sync: false
+      - key: CONGRESS_LOOKBACK_DAYS
+        value: "30"
 
   - type: web
     name: trading-bot-dashboard
@@ -154,3 +156,5 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_TO
         sync: false
+      - key: CONGRESS_LOOKBACK_DAYS
+        value: "30"

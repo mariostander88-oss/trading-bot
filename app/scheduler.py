@@ -9,6 +9,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from app.broker import AlpacaBroker, OrderRequest
 from app.config import Settings
+from app.congress_tracker import CongressTracker
+from app.crypto_filter import CryptoRegimeFilter
 from app.data_provider import AlpacaDataProvider
 from app.database import TradingDatabase, utc_now
 from app.notifier import NotificationService
@@ -35,6 +37,8 @@ class TradingBot:
         self.data_provider = data_provider or AlpacaDataProvider(settings)
         self.strategy = strategy or MovingAverageRsiStrategy(settings.stop_loss_pct)
         self.risk_manager = risk_manager or RiskManager(settings, database)
+        self.congress_tracker = CongressTracker(lookback_days=settings.congress_lookback_days)
+        self.crypto_filter = CryptoRegimeFilter()
 
     def run_cycle(self, force: bool = False) -> dict[str, object]:
         logger.info("Starting trading cycle; force=%s", force)
@@ -61,18 +65,57 @@ class TradingBot:
         if daily_goal_reached:
             logger.info("Daily profit target reached; new BUY orders will be blocked")
 
+        # --- BTC regime filter ---
+        crypto_regime, crypto_multiplier = self.crypto_filter.get_regime()
+        self.database.set_status("crypto_regime", crypto_regime)
+        self.database.set_status("crypto_size_multiplier", crypto_multiplier)
+        logger.info("Crypto regime: %s (multiplier=%.2f)", crypto_regime, crypto_multiplier)
+
+        # --- Congressional purchase tracker ---
+        congress_picks: dict[str, list[str]] = {}
+        try:
+            congress_picks = self.congress_tracker.get_recent_purchases()
+            self.database.set_status("congress_symbols_count", len(congress_picks))
+        except Exception as exc:
+            logger.warning("Congress tracker skipped: %s", exc)
+
         positions = self.broker.get_current_positions()
         position_by_symbol = {str(position.get("symbol", "")).upper(): position for position in positions}
         results: list[dict[str, object]] = []
 
+        # Main watchlist
+        processed: set[str] = set()
         for symbol in self.settings.watchlist:
+            processed.add(symbol.upper())
             try:
-                result = self._process_symbol(symbol, equity, buying_power, position_by_symbol)
+                result = self._process_symbol(
+                    symbol, equity, buying_power, position_by_symbol,
+                    crypto_multiplier=crypto_multiplier,
+                    congress_picks=congress_picks,
+                )
                 results.append(result)
             except Exception as exc:
                 logger.exception("Cycle failed for %s", symbol)
                 self.database.log_error("scheduler", f"{symbol}: {exc}", traceback.format_exc())
                 results.append({"symbol": symbol, "status": "error", "reason": str(exc)})
+
+        # Bonus: congress symbols not already in the watchlist
+        for symbol in congress_picks:
+            if symbol.upper() in processed or not symbol.isalpha():
+                continue
+            processed.add(symbol.upper())
+            try:
+                result = self._process_symbol(
+                    symbol, equity, buying_power, position_by_symbol,
+                    crypto_multiplier=crypto_multiplier,
+                    congress_picks=congress_picks,
+                )
+                result["congress_bonus"] = True
+                results.append(result)
+            except Exception as exc:
+                logger.exception("Congress bonus cycle failed for %s", symbol)
+                self.database.log_error("scheduler", f"congress/{symbol}: {exc}", traceback.format_exc())
+                results.append({"symbol": symbol, "status": "error", "reason": str(exc), "congress_bonus": True})
 
         self.database.set_status("last_cycle_at", utc_now())
         self.database.set_status("last_cycle_status", "completed")
@@ -85,9 +128,28 @@ class TradingBot:
         equity: float,
         buying_power: float,
         position_by_symbol: dict[str, dict[str, object]],
+        *,
+        crypto_multiplier: float = 1.0,
+        congress_picks: dict[str, list[str]] | None = None,
     ) -> dict[str, object]:
         market_data = self.data_provider.fetch_latest_bars(symbol)
         signal = self.strategy.generate_signal(symbol, market_data)
+
+        # Annotate signal with congressional buy info when relevant
+        congress_politicians = (congress_picks or {}).get(symbol.upper(), [])
+        if congress_politicians and signal.signal in ("BUY", "HOLD"):
+            unique_names = list(dict.fromkeys(congress_politicians))[:3]
+            names_str = ", ".join(unique_names)
+            extra = f" +{len(congress_politicians) - 3} more" if len(congress_politicians) > 3 else ""
+            congress_note = f" [Congress: {names_str}{extra}]"
+            signal = StrategySignal(
+                symbol=signal.symbol,
+                signal=signal.signal,
+                reason=signal.reason + congress_note,
+                close_price=signal.close_price,
+                stop_loss=signal.stop_loss,
+            )
+
         self._log_signal(signal)
 
         if signal.signal == "HOLD":
@@ -123,6 +185,13 @@ class TradingBot:
             quantity = float(position.get("qty", 0)) if position else 0
             if quantity <= 0:
                 return {"symbol": symbol, "signal": "SELL", "status": "skipped", "reason": "No long position to exit."}
+        elif signal.signal == "BUY" and crypto_multiplier < 1.0:
+            # Scale down position size based on BTC regime
+            quantity = max(1.0, int(quantity * crypto_multiplier))
+            logger.info(
+                "%s BUY quantity scaled by crypto multiplier %.2f → %s shares",
+                symbol, crypto_multiplier, int(quantity),
+            )
 
         order = self.broker.place_market_order(
             OrderRequest(symbol=symbol, side=signal.signal, quantity=quantity, reason=signal.reason)

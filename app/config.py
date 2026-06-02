@@ -72,6 +72,7 @@ class Settings:
     twilio_auth_token: str = ""
     twilio_whatsapp_from: str = ""
     twilio_whatsapp_to: str = ""
+    congress_lookback_days: int = 30
 
     @property
     def is_paper(self) -> bool:
@@ -198,6 +199,7 @@ def load_settings(env_file: str | os.PathLike[str] = ".env") -> Settings:
         twilio_auth_token=os.getenv("TWILIO_AUTH_TOKEN", "").strip(),
         twilio_whatsapp_from=os.getenv("TWILIO_WHATSAPP_FROM", "").strip(),
         twilio_whatsapp_to=os.getenv("TWILIO_WHATSAPP_TO", "").strip(),
+        congress_lookback_days=int(os.getenv("CONGRESS_LOOKBACK_DAYS", "30")),
     )
     settings.validate()
     return settings
