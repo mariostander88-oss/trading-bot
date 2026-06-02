@@ -38,10 +38,6 @@ def handle_command(
     bot: TradingBot,
     congress_tracker: CongressTracker,
 ) -> str:
-    if not _is_authorized(from_number, settings):
-        logger.warning("Unauthorized WhatsApp command from %s", from_number)
-        return "Unauthorized."
-
     parts = body.strip().upper().split()
     cmd = parts[0] if parts else ""
     arg = parts[1] if len(parts) >= 2 else ""
